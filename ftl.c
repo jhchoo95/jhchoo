@@ -79,7 +79,7 @@ void ftl_write(u32 lpn, u32 *write_buffer)
 				break;
 			}	 
 		}
-		if(s.host_write%200==0)
+		if(s.host_write>1800)
 		{
 			garbage_collection(0);
 		}
@@ -114,21 +114,6 @@ void garbage_collection(u32 bank)
 
 #ifndef COST_BENEFIT
 	// Greedy policy
-
-
-#else
-	// Cost-Benefit policy
-
-#endif
-
-/***************************************
-Add
-
-s.gc_write++;
-
-for every nand_write call (every valid page copy)
-that you issue in this function
-***************************************/
 	int a;
 	int b;
 	int c;
@@ -162,6 +147,54 @@ that you issue in this function
 			s.gc_write++;
 		}
 	}
+
+#else
+	// Cost-Benefit policy
+	int a;
+	int b;
+	int c;
+	int m;
+	int max=0;
+	int pos=0;	
+	for(a=bank*BLKS_PER_BANK*PAGES_PER_BLK; a<(bank+2)*BLKS_PER_BANK*PAGES_PER_BLK; a+=PAGES_PER_BLK)
+	{
+		c=0;
+		for(b=a; b<a+PAGES_PER_BLK; b++)
+		{
+			if(r[b][0]==1)
+			{
+				c++;
+				for(m=0; m<9; m++)
+				{
+					r[b][m]=0;
+				}
+			}
+		}
+		c=PAGES_PER_BLK-c;
+		c=((1-c)/(2*c))*now();
+		if(c>max)
+		{
+			max=c;
+			pos=a;
+		}				
+	}
+	for(a=pos; a<pos+PAGES_PER_BLK; a++)
+	{
+		if(r[a][0]!=0)
+		{
+			s.gc_write++;
+		}
+	}
+#endif
+
+/***************************************
+Add
+
+s.gc_write++;
+
+for every nand_write call (every valid page copy)
+that you issue in this function
+***************************************/
 				
 	return;
 }
